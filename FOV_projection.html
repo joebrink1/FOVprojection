@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+	<style>
+		body{
+			background-color: dimgray;
+		}
+	</style>
+	<head>
+		<script src="https://cdn.plot.ly/plotly-2.14.0.min.js"></script>
+	</head>
+	<body>
+		<p>X: <input type='range' min='0' max='5' id="x" onchange="generatePlot()"></input></p>
+		<p>Y: <input type='range' min='0' max='5' id="y" onchange="generatePlot()"></input></p>
+		<p>Z: <input type='range' min='0' max='5' id="z" onchange="generatePlot()"></input></p>
+		<p>HFOV: <input type='range' min='1' max='50' value="5" id="hfov_input" onchange="generatePlot()"></input></p>
+		<p>VFOV: <input type='range' min='1' max='50' value="5" id="vfov_input" onchange="generatePlot()"></input></p>
+		<p>Projection Range: <input id="projection" value="5"></input></p>
+
+
+		<div id='myDiv'></div>
+	</body>
+	<script>
+		var deg2rad = (Math.PI/180);
+
+		const unit = function(vect){
+		    mag = Math.sqrt(vect[0]**2 + vect[1]**2 + vect[2]**2);
+		    return [vect[0]/mag, vect[1]/mag, vect[2]/mag];
+		}
+
+		const cross = function(vect1, vect2){
+			return [vect1[1]*vect2[2] - vect1[2]*vect2[1], 
+					vect1[2]*vect2[0] - vect1[0]*vect2[2], 
+					vect1[0]*vect2[1] - vect1[1]*vect2[0]];
+		}
+
+		const calcFrame = function(pointing){
+			[los_x, los_y, los_z] = pointing;
+
+			if(los_z == 0){
+				var u = [0, 0, 1];
+			}
+			else{
+				var u = cross([-1*los_x, -1*los_y, los_z], pointing);
+			}
+
+			var v = cross(pointing, u);
+
+			return [unit(u), unit(v)];
+		}
+
+
+		const generatePlot = function(){
+			var layout = {paper_bgcolor: 'white', width: 500};
+			var x = parseFloat(document.getElementById('x').value);
+			var y = parseFloat(document.getElementById('y').value);
+			var z = parseFloat(document.getElementById('z').value);
+			var proj_range = parseFloat(document.getElementById('projection').value);
+			var hfov = parseFloat(document.getElementById('hfov_input').value);
+			var vfov = parseFloat(document.getElementById('vfov_input').value);
+
+			var los_unit = unit([x,y,z]);
+			var los_vect = los_unit.map(function(val){return val*proj_range});
+			var [u_unit, v_unit] = calcFrame(los_vect);
+			var u = u_unit.map(function(val){return val*proj_range});
+			var v = v_unit.map(function(val){return val*proj_range});
+
+			var hmag = proj_range * Math.tan(hfov*deg2rad);
+			var vmag = proj_range * Math.tan(vfov*deg2rad);
+
+			console.log(Math.tan(vfov*deg2rad));
+
+			Plotly.newPlot('myDiv', [{
+				  type: 'scatter3d',
+				  mode: 'lines+markers',
+				  x: [0, los_vect[0]],
+				  y: [0, los_vect[1]],
+				  z: [0, los_vect[2]],
+				  line: {
+				    width: 6,
+				    color: 'red'
+				  }},
+				  {
+				  type: 'scatter3d',
+				  mode: 'lines+markers',
+				  x: [0, u[0]],
+				  y: [0, u[1]],
+				  z: [0, u[2]],
+				  line: {
+				    width: 6,
+				    color: 'blue'
+				  }},
+				  {
+				  type: 'scatter3d',
+				  mode: 'lines+markers',
+				  x: [0, v[0]],
+				  y: [0, v[1]],
+				  z: [0, v[2]],
+				  line: {
+				    width: 6,
+				    color: 'green'
+				  }},
+				  {
+				  type: 'scatter3d',
+				  mode: 'lines+markers',
+				  x: [los_vect[0] + hmag*u_unit[0] + vmag*v_unit[0], 
+				  	  los_vect[0] + hmag*u_unit[0] - vmag*v_unit[0],
+				  	  los_vect[0] - hmag*u_unit[0] - vmag*v_unit[0],
+				  	  los_vect[0] - hmag*u_unit[0] + vmag*v_unit[0],
+				  	  los_vect[0] + hmag*u_unit[0] + vmag*v_unit[0]],
+
+				  y: [los_vect[1] + hmag*u_unit[1] + vmag*v_unit[1], 
+				  	  los_vect[1] + hmag*u_unit[1] - vmag*v_unit[1],
+				  	  los_vect[1] - hmag*u_unit[1] - vmag*v_unit[1],
+				  	  los_vect[1] - hmag*u_unit[1] + vmag*v_unit[1],
+				  	  los_vect[1] + hmag*u_unit[1] + vmag*v_unit[1]],
+
+				  z: [los_vect[2] + hmag*u_unit[2] + vmag*v_unit[2], 
+				  	  los_vect[2] + hmag*u_unit[2] - vmag*v_unit[2],
+				  	  los_vect[2] - hmag*u_unit[2] - vmag*v_unit[2],
+				  	  los_vect[2] - hmag*u_unit[2] + vmag*v_unit[2],
+				  	  los_vect[2] + hmag*u_unit[2] + vmag*v_unit[2]],
+				  line: {
+				    width: 6,
+				    color: 'yellow'
+				  }}                 
+				], layout);
+		};
+	</script>
+</html>
